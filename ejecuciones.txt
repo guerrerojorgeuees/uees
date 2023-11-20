@@ -1,0 +1,3 @@
+/bin/python3 /home/drachen/Documentos/uees/moduloColaMensaje/colamensaje.py
+/bin/python3 /home/drachen/Documentos/uees/servidor.py
+/bin/python3 /home/drachen/Documentos/uees/moduloCapturaDatos/captura_datos.py
