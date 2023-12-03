@@ -1,18 +1,18 @@
-import pika
+import requests
+import json
 
-def callback(ch, method, properties, body):
-    print(f"Formulario recibido desde la cola en el servidor: {body.decode()}")
+url = "http://127.0.0.1:5009/form"
 
-def iniciar_servidor():
-    connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
-    canal = connection.channel()
+# Ejemplo de datos del formulario
+form_data = {
+    "id": 123,
+    "name": "Ejemplo",
+    "content": "Contenido de ejemplo"
+}
 
-    canal.queue_declare(queue='cola_formularios')
+# Hacer una solicitud POST al servidor
+response = requests.post(url, json=form_data, headers={"X-Real-Ip": "127.0.0.1", "X-Real-Port": "5005"})
 
-    canal.basic_consume(queue='cola_formularios', on_message_callback=callback, auto_ack=True)
-
-    print('Servidor esperando formularios desde la cola. Para salir, presione CTRL+C')
-    canal.start_consuming()
-
-if __name__ == "__main__":
-    iniciar_servidor()
+# Imprimir la respuesta del servidor
+print(response.status_code)
+print(response.json())
