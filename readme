@@ -1,7 +1,6 @@
-Proyecto-Almacenamiento
+Proyecto JORGE LUIS GUERRERO ALEJANDRO
 │
 ├── almacenamiento.py        # Código principal del módulo de almacenamiento
-├── proxy.py                 # Código del proxy para manejar la lógica de líder-seguidor
 ├── validarformulario.py     # Código para validar formularios y gestionar colas 
 ├── formulario.py            # Crea los formularios
 ├── captura_datos.py         # Código enviar los formularios creados a la cola de mensaje
@@ -12,9 +11,9 @@ Proyecto-Almacenamiento
 ├── formularios_no_validos/  # Carpeta para almacenar formularios no válidos
 
 │
-├── formularios_validados/   # Carpeta para almacenar formularios validados
+├── storage_data/            # Carpeta para almacenar formularios validados
 
 │
 ├── duplicates/              # Carpeta para almacenar formularios duplicados
-│   ├── formulario_5.json
 
+├── pika/                    # Libreria para Cola de mensaje
