@@ -25,17 +25,6 @@ CAMPOS_FORMULARIO = [
     "propiedad_vivienda",
     "deudas",
     "estado_salud",
-    "enfermedades_cronicas",
-    "grupo_sanguineo",
-    "acceso_electricidad",
-    "acceso_agua_potable",
-    "servicios_saneamiento",
-    "tiempo_residencia_actual",
-    "tipo_vivienda",
-    "num_habitaciones",
-    "estado_salud_general",
-    "historial_migracion",
-    "motivo_migracion"
 ]
 
 def generar_formulario():
@@ -50,10 +39,10 @@ def generar_valor(campo):
     elif campo == "correo_electronico":
         return f"{campo.lower()}_{random.randint(1, 100)}@dominio.com"
     elif campo == "numero_identificacion":
-        # return str(random.randint(1000000000, 9999999999))  # Garantizar 10 dígitos
-        return '0942807462' # Garantizar 10 dígitos
+        return str(random.randint(1000000000, 9999999999))  # Garantizar 10 dígitos
+        # return '0942807462' # Garantizar 10 dígitos
     elif campo == "ingresos_mensuales":
-        return round(random.uniform(1000, 10000), 2)
+        return str(round(random.uniform(1000, 10000), 2))
     elif campo == "estado_salud_general":
         return random.choice(["Excelente", "Bueno", "Regular", "Malo"])
     elif campo == "acceso_electricidad" or campo == "acceso_agua_potable" or campo == "servicios_saneamiento":

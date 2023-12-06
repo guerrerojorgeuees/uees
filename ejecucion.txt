@@ -1,3 +1,0 @@
-almacenamiento // primero levanto el servidor de almacenamiento
-colademensaje // para ver la data que se envia y se envia al modulo validacion
-capturadatos // enviar los formularios por cola de mensaje

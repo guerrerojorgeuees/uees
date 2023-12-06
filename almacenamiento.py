@@ -9,7 +9,7 @@ import time
 
 # Creación de la aplicación Flask
 app = Flask(__name__)
-
+lider_actual = 0
 # Definición de carpetas de almacenamiento y nodos de réplica
 storage_folder = 'storage_data'
 duplicates_folder = 'duplicates'
@@ -20,35 +20,54 @@ replica_nodes = [
     ('127.0.0.1', 5018, False)   # Seguidora 3
 ]
 
-# Variables para simular el estado de liderazgo y la detección de fallos
-es_lider = False
-detectando_fallo = False
 
-# Función para convertirse en líder
-def convertirse_en_lider():
-    global es_lider
-    es_lider = True
-    print("¡Ahora eres el líder!")
 
-# Función para simular la detección de fallos y la elección de un nuevo líder
-def detectar_fallo():
-    global es_lider, detectando_fallo
-    while True:
-        time.sleep(10)  # Simular la detección de fallos cada 10 segundos
-        if es_lider and not detectando_fallo:
-            detectando_fallo = True
-            # Lógica de detección de fallos aquí (puedes implementar un algoritmo específico)
-            # En este ejemplo, se asume que el líder falla y se inicia la elección de un nuevo líder
-            print("¡Fallo detectado! Iniciando elección de líder...")
-            es_lider = False
-            detectando_fallo = False
-            convertirse_en_lider()
 
-# Ruta para convertirse en líder
-@app.route('/convertirse_en_lider', methods=['POST'])
-def convertirse_en_lider_endpoint():
-    convertirse_en_lider()
-    return jsonify({'message': '¡Ahora eres el líder!'}), 200
+
+# Ruta para simular la caída del líder
+@app.route('/form/simular_caida_lider')
+def hacer_caer_leader():
+    global replica_nodes
+
+    # Encuentra la posición del líder actual en el array
+    lider_pos = next((i for i, node in enumerate(replica_nodes) if node[2]), None)
+
+    if lider_pos is not None:
+        # Cambia el estado del líder actual a False
+        replica_nodes[lider_pos] = (replica_nodes[lider_pos][0], replica_nodes[lider_pos][1], False)
+
+        # Encuentra la siguiente posición en el array para el nuevo líder
+        nuevo_lider_pos = (lider_pos + 1) % len(replica_nodes)
+
+        # Cambia el estado del nuevo líder a True
+        replica_nodes[nuevo_lider_pos] = (replica_nodes[nuevo_lider_pos][0], replica_nodes[nuevo_lider_pos][1], True)
+
+        return jsonify({'message': f'Leader simulated to be down. New leader: {nuevo_lider_pos}'})
+    else:
+        return jsonify({'message': 'No leader found'})
+
+# Ruta para simular la desconexión temporal de un seguidor específico y la conexión de un nuevo seguidor
+@app.route('/form/simular_desconexion_y_nuevo_seguidor/<int:seguidor_index>')
+def simular_desconexion_y_nuevo_seguidor(seguidor_index):
+    global replica_nodes
+
+    if 1 <= seguidor_index < len(replica_nodes):
+        # Desconectar el seguidor específico
+        replica_nodes[seguidor_index] = (replica_nodes[seguidor_index][0], replica_nodes[seguidor_index][1], False)
+
+        # Conectar un nuevo seguidor
+        nuevo_seguidor = ('127.0.0.1', 5020 + len(replica_nodes), False)  # Nueva dirección IP y puerto para el nuevo seguidor
+        replica_nodes.append(nuevo_seguidor)
+
+        return jsonify({'message': f'Seguidor {seguidor_index} desconectado temporalmente. Nuevo seguidor conectado en {nuevo_seguidor}'})
+
+    else:
+        return jsonify({'error': 'Índice de seguidor no válido'}), 400
+
+
+
+
+
 
 # Función para replicar a otros nodos
 def replicate_to_other_nodes(form_data, sender_address):
@@ -61,41 +80,24 @@ def send_replication_request(node_address, form_data):
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             # Desempaquetar la dirección del nodo
-            print("Dirección del nodo:", node_address)
-            host, port, _ = node_address
-
-            print("aqui estamos 1")
-            print(port)
+            host, port, lider_nodo = node_address
             s.connect((host, port))
             
-            # Serializar los datos antes de enviar con comillas dobles
+            # Serializar los datos con comillas dobles y codificar a bytes antes de enviar
             serialized_data = json.dumps(form_data, ensure_ascii=False).encode('utf-8')
+
             s.sendall(serialized_data)
+            if lider_nodo:  #solo el lider puede guardar
+                print(node_address)
+                print("es nodo lider!! si registro")
+                print(lider_nodo)
+                replicate_locally(form_data)
+
+
     except Exception as e:
         print(f"Error replicando a {node_address}: {e}")
         import traceback
         traceback.print_exc()
-
-
-
-
-
-# # Función para replicar localmente
-# def replicate_locally(form_data):
-#     global es_lider
-#     form_id = form_data.get('id')
-#     print("aqui estamos")
-#     print(es_lider)
-#     try:
-#         if es_lider:
-#             os.makedirs(storage_folder, exist_ok=True)
-#             with open(os.path.join(storage_folder, f'{form_id}.json'), 'w') as form_file:
-#                 json.dump(form_data, form_file)
-#             print("Soy el líder, almacenando localmente.")
-#         else:
-#             print("No soy el líder, solo replicando el formulario.")
-#     except Exception as e:
-#         print(f"Error al guardar localmente: {e}")
 
 # Función para replicar localmente
 def replicate_locally(form_data):
@@ -108,7 +110,6 @@ def replicate_locally(form_data):
             json.dump(form_data, form_file)
     except Exception as e:
         print(f"Error al guardar localmente: {e}")
-
 
 # Ruta para verificar la existencia de una persona por su cédula
 def verificar_existencia_persona(cedula):
@@ -150,19 +151,6 @@ def save_form():
                 with open(os.path.join(duplicates_folder, f'{form_id}.json'), 'w') as duplicate_file:
                     json.dump(form_data, duplicate_file)
                 return jsonify({'message': 'Duplicate form detected, stored in duplicates folder'}), 409
-
-            # if es_lider:
-            #     # Guardar localmente solo si es líder
-           
-            # if isinstance(form_data, bytes):
-            #      form_data = json.loads(form_data.decode('utf-8').replace("'", "\""))
-            # else:
-            #     form_data = json.loads(form_data.replace("'", "\""))
-
-            # print("JSON a enviar:", form_data)
-            replicate_locally(form_data)
-
-            # Realizar replicación solo si es líder
             replicate_to_other_nodes(form_data, (sender_ip, sender_port))
 
             return jsonify({'message': 'Form saved successfully'}), 201
@@ -173,7 +161,6 @@ def save_form():
     except Exception as e:
         print("Error al procesar la solicitud:", str(e))
         return jsonify({'error': str(e)}), 500
-
 
 # Función para ejecutar réplica
 def run_replica(node_address):
@@ -195,18 +182,17 @@ def run_replica(node_address):
                     try:
                         # Decodificar los datos correctamente
                         if isinstance(data, bytes):
-                            form_data = json.loads(data.decode('utf-8').replace("'", "\""))
+                            form_data = json.loads(data.decode('utf-8'))
                         else:
-                            form_data = json.loads(data.replace("'", "\""))
-
+                            form_data = json.loads(data)
+                        
                         print("JSON recibido:", form_data)
                         replicate_locally(form_data)
                     except json.JSONDecodeError as json_error:
-                        print(f"Error en réplica {node_address}: JSON no válido - {json_error}")        
+                        print(f"Error en réplica {node_address}: JSON no válido - {json_error}")
 
     except Exception as e:
         print(f"Error en réplica {node_address}: {e}")
-
 
 # Configuración y ejecución de réplicas
 if __name__ == '__main__':
